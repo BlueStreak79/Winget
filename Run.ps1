@@ -27,26 +27,11 @@ function Install-Package {
 
 # Applications to install
 $packagesToInstall = @(
-    @{
-        Name = "WinRAR"
-        PackageId = "WinRAR"
-    },
-    @{
-        Name = "VLC Media Player"
-        PackageId = "VLC.MediaPlayer"
-    },
-    @{
-        Name = "Adobe Acrobat Reader DC"
-        PackageId = "Adobe.AdobeAcrobatReader"
-    },
-    @{
-        Name = "Google Chrome"
-        PackageId = "Google.Chrome"
-    },
-    @{
-        Name = "7-Zip"
-        PackageId = "7Zip.7Zip"
-    }
+    "WinRAR",
+    "VLC.MediaPlayer",
+    "Adobe.AdobeAcrobatReader",
+    "Google.Chrome",
+    "7Zip.7Zip"
 )
 
 # Check if WinGet is installed
@@ -84,15 +69,12 @@ if ($wingetInstalled) {
     }
 
     # Install applications
-    foreach ($app in $packagesToInstall) {
-        $packageName = $app.Name
-        $packageId = $app.PackageId
-
-        if (-not (Is-PackageInstalled $packageId)) {
-            Install-Package $packageId
+    foreach ($package in $packagesToInstall) {
+        if (-not (Is-PackageInstalled $package)) {
+            Install-Package $package
         }
         else {
-            Write-Host "$packageName is already installed."
+            Write-Host "$package is already installed."
         }
     }
 }
