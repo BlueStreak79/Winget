@@ -4,9 +4,9 @@ $progressPreference = 'silentlyContinue'
 # Function to check if a package is installed using WinGet
 function Is-PackageInstalled {
     param (
-        [string]$PackageName
+        [string]$PackageId
     )
-    $packageInstalled = winget show $PackageName -q
+    $packageInstalled = winget show $PackageId -q
     return $packageInstalled -eq 0
 }
 
@@ -89,7 +89,7 @@ if ($wingetInstalled) {
         $packageId = $app.PackageId
 
         if (-not (Is-PackageInstalled $packageId)) {
-            Install-Package $packageName
+            Install-Package $packageId
         }
         else {
             Write-Host "$packageName is already installed."
