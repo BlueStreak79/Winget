@@ -21,7 +21,7 @@ function Install-Package {
         Write-Host "$PackageName installed successfully."
     }
     catch {
-        Write-Host "An error occurred during installation of $PackageName: $_"
+        Write-Host "An error occurred during installation of ${PackageName}: $_"
     }
 }
 
