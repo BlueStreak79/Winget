@@ -3,19 +3,33 @@ if ($PSVersionTable.PSVersion.Major -eq 7) {
   return
 }
 
-# Check for Desktop App Installer
-$requirement = Get-AppPackage "Microsoft.DesktopAppInstaller"
+# Check for Desktop App Installer presence
+$daiInstalled = Get-AppPackage "Microsoft.DesktopAppInstaller"
 
-if (-Not $requirement) {
+if (-Not $daiInstalled) {
   Write-Verbose "Installing Desktop App Installer requirement..."
   Add-AppxPackage -Path "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx" -ErrorAction Stop
+} else {
+  Write-Host "Desktop App Installer already installed."
 }
 
-# Register winget
-Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
+# Check winget registration using 'winget --info'
+$wingetRegistered = winget --info | Where-Object { $_ -match 'winget package manager' }
+
+if ($wingetRegistered) {
+  Write-Host "winget is already registered."
+} else {
+  Write-Verbose "Registering winget..."
+  Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
+}
 
 # Function to install application with retry
 function Install-WithRetry ($appId, $source) {
+  if (winget show $appId | Out-Null) {
+    Write-Host "$appId already installed."
+    return
+  }
+
   if (winget install --id $appId --source $source -Quiet -ErrorAction Stop) {
     Write-Host "$appId installation successful!"
   } else {
