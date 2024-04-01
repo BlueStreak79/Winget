@@ -1,59 +1,37 @@
-# Suppress progress information
-$progressPreference = 'silentlyContinue'
-
-# Function to check if a package is installed using WinGet
-function Is-PackageInstalled {
-    param (
-        [string]$PackageId
-    )
-    if (Get-Command "winget" -ErrorAction SilentlyContinue) {
-        $packageInstalled = winget show $PackageId -q
-        return $packageInstalled -eq 0
-    }
-    else {
-        # Handle case when WinGet is not available (Windows 10)
-        return $false
-    }
+if ($PSVersionTable.PSVersion.Major -eq 7) {
+  Write-Warning "This script is not recommended for PowerShell 7. Use Windows PowerShell instead."
+  return
 }
 
-# Function to install a package using WinGet without any user confirmations
-function Install-Package {
-    param (
-        [string]$PackageName
-    )
-    Write-Host "Installing $PackageName..."
-    try {
-        winget install $PackageName --silent --accept-package-agreements
-        Write-Host "$PackageName installed successfully."
-    }
-    catch {
-        Write-Host "An error occurred during installation of ${PackageName}: $_"
-    }
+# Check for Desktop App Installer
+$requirement = Get-AppPackage "Microsoft.DesktopAppInstaller"
+
+if (-Not $requirement) {
+  Write-Verbose "Installing Desktop App Installer requirement..."
+  Add-AppxPackage -Path "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx" -ErrorAction Stop
 }
 
-# Applications to install
-$packagesToInstall = @(
-    "WinRAR",
-    "VLC.MediaPlayer",
-    "Adobe.AdobeAcrobatReader",
-    "Google.Chrome",
-    "7Zip.7Zip"
-)
+# Register winget
+Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
 
-# Check if WinGet is available
-$wingetInstalled = Get-Command "winget" -ErrorAction SilentlyContinue
-
-if (-not $wingetInstalled) {
-    Write-Host "WinGet is not available. This script requires Windows 11 with WinGet installed."
-    exit
+# Function to install application with retry
+function Install-WithRetry ($appId, $source) {
+  if (winget install --id $appId --source $source -Quiet -ErrorAction Stop) {
+    Write-Host "$appId installation successful!"
+  } else {
+    Write-Warning "$appId installation failed. Retry?"
+    $confirm = Read-Host "Type 'y' to retry or any other key to skip: " -NoEcho
+    if ($confirm -eq "y") {
+      Install-WithRetry -appId $appId -source $source
+    }
+  }
 }
 
-# Install applications
-foreach ($package in $packagesToInstall) {
-    if (-not (Is-PackageInstalled $package)) {
-        Install-Package $package
-    }
-    else {
-        Write-Host "$package is already installed."
-    }
-}
+# Install applications using winget with retry function
+Install-WithRetry -appId "7zip.7z" -source "winget.run"
+Install-WithRetry -appId "Adobe.Acrobat.Reader.DC" -source "adobe.com"
+Install-WithRetry -appId "Google.Chrome" -source "winget.run"
+Install-WithRetry -appId "VideoLAN.VLC" -source "winget.run"
+Install-WithRetry -appId "WinRAR.WinRAR" -source "winrar.com"
+
+Write-Host "Script execution complete."
