@@ -28,20 +28,51 @@ function Install-WithRetry ($appId, $source) {
     return $false
 }
 
-Write-Information "Downloading WinGet and its dependencies..."
-Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
-Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
-Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx -OutFile Microsoft.UI.Xaml.2.8.x64.appx
-Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx
-Add-AppxPackage Microsoft.UI.Xaml.2.8.x64.appx
-Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+# Function to check if dependencies are installed
+function Check-Dependencies {
+    $wingetPath = Get-Command -Name "winget.exe" -ErrorAction SilentlyContinue
+    $vclibsInstalled = Get-AppPackage "Microsoft.VCLibs.x64.14.00.Desktop" -ErrorAction SilentlyContinue
+    $uixamlInstalled = Get-AppPackage "Microsoft.UI.Xaml.2.8.x64" -ErrorAction SilentlyContinue
+    return ($wingetPath -and $vclibsInstalled -and $uixamlInstalled)
+}
+
+# Check if dependencies are installed
+$wingetPath = Get-Command -Name "winget.exe" -ErrorAction SilentlyContinue
+
+if (-not $wingetPath) {
+    Write-Information "Downloading and installing Winget..."
+    Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+    Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+}
+
+# Check dependencies only if Winget is installed
+if ($wingetPath) {
+    $vclibsInstalled = Get-AppPackage "Microsoft.VCLibs.x64.14.00.Desktop" -ErrorAction SilentlyContinue
+    $uixamlInstalled = Get-AppPackage "Microsoft.UI.Xaml.2.8.x64" -ErrorAction SilentlyContinue
+    
+    if (-not ($vclibsInstalled -and $uixamlInstalled)) {
+        Write-Information "Installing missing dependencies..."
+        
+        # Install missing dependencies
+        if (-not $vclibsInstalled) {
+            Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
+            Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx
+        }
+        
+        if (-not $uixamlInstalled) {
+            Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx -OutFile Microsoft.UI.Xaml.2.8.x64.appx
+            Add-AppxPackage Microsoft.UI.Xaml.2.8.x64.appx
+        }
+    }
+}
 
 # Install applications using winget with retry function
 $apps = @(
     @{Id="7zip.7z"; Source="winget.run"},
     @{Id="Adobe.AcrobatReader"; Source="winget.run"},
     @{Id="Google.Chrome"; Source="winget.run"},
-    @{Id="VideoLAN.VLC"; Source="winget.run"}
+    @{Id="VideoLAN.VLC"; Source="winget.run"},
+    @{Id="WinRAR.WinRAR"; Source="winget.run"}
 )
 
 foreach ($app in $apps) {
