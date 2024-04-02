@@ -55,12 +55,14 @@ if ($wingetPath) {
         
         # Install missing dependencies
         if (-not $vclibsInstalled) {
-            Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
+            Write-Information "Installing VCLibs..."
+            Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx -ErrorAction SilentlyContinue
             Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx
         }
         
         if (-not $uixamlInstalled) {
-            Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx -OutFile Microsoft.UI.Xaml.2.8.x64.appx
+            Write-Information "Installing UI.Xaml..."
+            Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx -OutFile Microsoft.UI.Xaml.2.8.x64.appx -ErrorAction SilentlyContinue
             Add-AppxPackage Microsoft.UI.Xaml.2.8.x64.appx
         }
     }
