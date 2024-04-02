@@ -1,46 +1,51 @@
-if ($PSVersionTable.PSVersion.Major -eq 7) {
-  Write-Warning "This script is not recommended for PowerShell 7. Use Windows PowerShell instead."
-  return
-}
-
-# Check for Desktop App Installer presence
-$daiInstalled = Get-AppPackage "Microsoft.DesktopAppInstaller"
-
-if (-Not $daiInstalled) {
-  Write-Verbose "Installing Desktop App Installer requirement..."
-  Add-AppxPackage -Path "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx" -ErrorAction Stop
-} else {
-  Write-Host "Desktop App Installer already installed."
-}
-
-# Check winget registration by checking if 'winget.exe' exists in the PATH
-$wingetPath = Get-Command -Name "winget.exe" -ErrorAction SilentlyContinue
-
-if ($wingetPath) {
-  Write-Host "winget is already registered."
-} else {
-  Write-Verbose "Registering winget..."
-  Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe
-}
+$progressPreference = 'silentlyContinue'
 
 # Function to install application with retry
 function Install-WithRetry ($appId, $source) {
-  if (winget show $appId | Out-Null) {
-    Write-Host "$appId already installed."
-    return
-  }
+    $retryCount = 3
+    $retryDelay = 5  # seconds
+    
+    for ($i = 1; $i -le $retryCount; $i++) {
+        Write-Host "Attempting to install $appId (Attempt $i of $retryCount)..."
+        
+        if (winget show $appId 2>$null) {
+            Write-Host "$appId already installed."
+            return $true
+        }
 
-  if (winget install --id $appId --source $source -Quiet -ErrorAction Stop) {
-    Write-Host "$appId installation successful!"
-  } else {
-    Write-Warning "$appId installation failed. Retry?"
-    $confirm = Read-Host "Type 'y' to retry or any other key to skip: " -NoEcho
-    if ($confirm -eq "y") {
-      Install-WithRetry -appId $appId -source $source
+        $installResult = winget install --id $appId --source $source -Quiet -ErrorAction SilentlyContinue
+
+        if ($installResult) {
+            Write-Host "$appId installation successful!"
+            return $true
+        } else {
+            Write-Warning "$appId installation failed. Retrying in $retryDelay seconds..."
+            Start-Sleep -Seconds $retryDelay
+        }
     }
-  }
+    
+    Write-Error "Failed to install $appId after $retryCount attempts."
+    return $false
 }
 
+Write-Information "Downloading WinGet and its dependencies..."
+Invoke-WebRequest -Uri https://aka.ms/getwinget -OutFile Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+Invoke-WebRequest -Uri https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx -OutFile Microsoft.VCLibs.x64.14.00.Desktop.appx
+Invoke-WebRequest -Uri https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx -OutFile Microsoft.UI.Xaml.2.8.x64.appx
+Add-AppxPackage Microsoft.VCLibs.x64.14.00.Desktop.appx
+Add-AppxPackage Microsoft.UI.Xaml.2.8.x64.appx
+Add-AppxPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+
 # Install applications using winget with retry function
-Install-WithRetry -appId "7zip.7z" -source "winget.run"
-Install-WithRetry -appId "Adobe.Acrobat.Reader.DC" -source "a
+$apps = @(
+    @{Id="7zip.7z"; Source="winget.run"},
+    @{Id="Adobe.AcrobatReader"; Source="winget.run"},
+    @{Id="Google.Chrome"; Source="winget.run"},
+    @{Id="VideoLAN.VLC"; Source="winget.run"}
+)
+
+foreach ($app in $apps) {
+    Install-WithRetry -appId $app.Id -source $app.Source
+}
+
+Write-Host "Script execution complete."
