@@ -13,10 +13,10 @@ if (-Not $daiInstalled) {
   Write-Host "Desktop App Installer already installed."
 }
 
-# Check winget registration using 'winget --info'
-$wingetRegistered = winget --info | Where-Object { $_ -match 'winget package manager' }
+# Check winget registration by checking if 'winget.exe' exists in the PATH
+$wingetPath = Get-Command -Name "winget.exe" -ErrorAction SilentlyContinue
 
-if ($wingetRegistered) {
+if ($wingetPath) {
   Write-Host "winget is already registered."
 } else {
   Write-Verbose "Registering winget..."
@@ -43,9 +43,4 @@ function Install-WithRetry ($appId, $source) {
 
 # Install applications using winget with retry function
 Install-WithRetry -appId "7zip.7z" -source "winget.run"
-Install-WithRetry -appId "Adobe.Acrobat.Reader.DC" -source "adobe.com"
-Install-WithRetry -appId "Google.Chrome" -source "winget.run"
-Install-WithRetry -appId "VideoLAN.VLC" -source "winget.run"
-Install-WithRetry -appId "WinRAR.WinRAR" -source "winrar.com"
-
-Write-Host "Script execution complete."
+Install-WithRetry -appId "Adobe.Acrobat.Reader.DC" -source "a
