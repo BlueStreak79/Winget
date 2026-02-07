@@ -1,4 +1,4 @@
-# WinGet Bootstrapper - Single File (Existence + Non-Admin Tolerant)
+# WinGet Bootstrapper - Single File (PS 5.1 Compatible)
 # Usage: irm URL | iex
 
 $ProgressPreference = 'SilentlyContinue'
@@ -22,9 +22,13 @@ $IsAdmin = ([Security.Principal.WindowsPrincipal] `
     [Security.Principal.WindowsIdentity]::GetCurrent()
 ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-if (-not $IsAdmin) {
+if ($IsAdmin) {
+    $InstallScope = 'AllUsers'
+}
+else {
+    $InstallScope = 'CurrentUser'
     Write-Host "WARNING: Not running as Administrator." -ForegroundColor Yellow
-    Write-Host "Attempting user-scope WinGet module install..."
+    Write-Host "Attempting user-scope installation..."
 }
 
 try {
@@ -33,13 +37,13 @@ try {
     Install-PackageProvider -Name NuGet -Force -Confirm:$false | Out-Null
 
     # ---- Install WinGet PowerShell Module ----
-    Write-Host "Installing Microsoft.WinGet.Client module..."
+    Write-Host "Installing Microsoft.WinGet.Client module ($InstallScope)..."
     Install-Module -Name Microsoft.WinGet.Client `
         -Repository PSGallery `
         -Force `
         -Confirm:$false `
         -AllowClobber `
-        -Scope ($IsAdmin ? 'AllUsers' : 'CurrentUser') | Out-Null
+        -Scope $InstallScope | Out-Null
 
     # ---- Bootstrap WinGet ----
     if ($IsAdmin) {
@@ -48,7 +52,7 @@ try {
     }
     else {
         Write-Host "Skipping Repair-WinGetPackageManager (Admin required)."
-        Write-Host "WinGet may already exist via App Installer."
+        Write-Host "If App Installer already exists, WinGet should still work."
     }
 
     # ---- Final Validation ----
@@ -56,8 +60,8 @@ try {
         Write-Host "WinGet is now available." -ForegroundColor Green
     }
     else {
-        Write-Host "WinGet installation attempted but not detected." -ForegroundColor Yellow
-        Write-Host "If this is LTSC or Store-less Windows, manual App Installer may be required."
+        Write-Host "WinGet not detected after install attempt." -ForegroundColor Yellow
+        Write-Host "Likely LTSC / Store-less system."
     }
 }
 catch {
